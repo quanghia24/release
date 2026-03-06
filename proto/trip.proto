@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package trip;
+
+option go_package = "shared/proto/trip;trip";
+
+// TripService defines the gRPC service for trip-related operations.
+service TripService {
+  rpc TripPreview (TripPreviewRequest) returns (TripPreviewResponse);
+  rpc CreateTrip (CreateTripRequest) returns (CreateTripResponse);
+}
+
+message TripPreviewRequest {
+  string userID = 1;
+  Coordinate pickup = 2;
+  Coordinate destination = 3;
+}
+
+message TripPreviewResponse {
+  string tripID = 1;
+  Route route = 2;
+  repeated RideFare rideFares = 3;
+}
+
+message Coordinate {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message Route {
+  double distance = 1;
+	double duration = 2;
+	repeated Geometry geometry = 3;
+}
+
+message RideFare {
+  string id = 1;
+	string userID = 2;
+	string packageSlug = 3;
+	double totalPriceInCents = 4;
+}
+
+message Geometry {
+  repeated Coordinate coordinates = 1;
+}
+
+
+message CreateTripRequest {
+  string rideFareID = 1;
+  string userID = 2;
+}
+
+message CreateTripResponse {
+  string tripID = 1;
+  Trip trip = 2;
+}
+
+message Trip {
+  string id = 1;
+  RideFare selectedRideFare = 2;
+  Route route = 3;
+  string status = 4;
+  string userID = 5;
+  TripDriver tripDriver = 6;
+}
+
+// static driver object used to store the driver information
+message TripDriver {
+  string id = 1;
+  string name = 2;
+  string profilePicture = 3;
+  string carPlate = 4;
+}
