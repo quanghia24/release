@@ -3,8 +3,10 @@ package main
 import (
 	"log"
 	"net/http"
+	"ride-sharing/services/api-gateway/grpc_clients"
 	"ride-sharing/shared/contracts"
-	"ride-sharing/shared/util"
+
+	pb "ride-sharing/shared/proto/driver"
 
 	"github.com/gorilla/websocket"
 )
@@ -21,6 +23,7 @@ func handleDriverWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to upgrade to WS: %v", err)
 		return
 	}
+
 	defer conn.Close()
 
 	userID := r.URL.Query().Get("userID")
@@ -35,23 +38,39 @@ func handleDriverWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type Driver struct {
-		Id             string `json:"id"`
-		Name           string `json:"name"`
-		ProfilePicture string `json:"profilePicture"`
-		CarPlate       string `json:"carPlate"`
-		PackageSlug    string `json:"packageSlug"`
+	driverService, err := grpc_clients.NewDriverServiceClient()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer func(){
+		driver, err := driverService.Client.UnregisterDriver(r.Context(), &pb.RegisterDriverRequest{
+			DriverID: userID,
+		})
+		if err != nil {
+			log.Printf("Error calling UnregisterDriver: %v\n", err)
+		}
+		driverService.Close()
+
+		log.Println("Driver unregister:", driver)
+	}()
+
+
+	req := &pb.RegisterDriverRequest{
+		DriverID:    userID,
+		PackageSlug: packageSlug,
+	}
+
+	driverRegister, err := driverService.Client.RegisterDriver(r.Context(), req)
+	if err != nil {
+		log.Printf("Error calling RegisterDriver: %v\n", err)
+		http.Error(w, "Failed to register driver", http.StatusInternalServerError)
+		return
 	}
 
 	msg := contracts.WSMessage{
 		Type: "driver.cmd.register",
-		Data: Driver{
-			Id:             userID,
-			Name:           "Ryan",
-			ProfilePicture: util.GetRandomAvatar(1),
-			CarPlate:       "FAKEPLATE",
-			PackageSlug:    packageSlug,
-		},
+		Data: driverRegister.Driver,
 	}
 
 	if err := conn.WriteJSON(msg); err != nil {

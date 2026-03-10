@@ -80,7 +80,7 @@ func (s *service) GenerateTripFares(rideFares []*domain.RideFareModel, userID st
 			UserID:            userID,
 			PackageSlug:       f.PackageSlug,
 			TotalPriceInCents: f.TotalPriceInCents,
-			Route: 					 route,
+			Route:             route,
 		}
 
 		if err := s.repo.SaveRideFare(context.Background(), fare); err != nil {
